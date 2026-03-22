@@ -19,6 +19,15 @@ def validate_post(blog_post):
     return missing_fields
 
 
+def validate_sorting_params(sort_by, sorting_direction):
+    invalid_params = []
+    if sort_by not in ("title", "content", None):
+        invalid_params.append(sort_by)
+    if sorting_direction not in ("asc", "desc", None):
+        invalid_params.append(sorting_direction)
+    return invalid_params
+
+
 def find_post_by_id(post_id):
     return next((post for post in POSTS if post.get("id") == post_id), None)
 
@@ -27,14 +36,35 @@ def find_post_by_id(post_id):
 def handle_posts():
     if request.method == 'POST':
         new_post = request.get_json()
+        # validate that required fields are present
         missing_fields = validate_post(new_post)
         if missing_fields:
             return jsonify({"error": "missing fields", "fields": missing_fields}), 400
-        new_id = max(post.get("id") for post in POSTS) + 1
+        # generate a new unique ID (default=0 prevents crash if list is empty)
+        new_id = max((post.get("id") for post in POSTS), default=0) + 1
         new_post["id"] = new_id
         POSTS.append(new_post)
         return jsonify(new_post), 201
-    return jsonify(POSTS)
+    sort = request.args.get("sort")
+    direction = request.args.get("direction")
+    # no params provided -> return posts in original order
+    if not sort and not direction:
+        return jsonify(POSTS)
+    # reject invalid sort/ direction values before processing
+    invalid_params = validate_sorting_params(sort, direction)
+    if invalid_params:
+        return jsonify({"error": "invalid sorting parameters", "parameters": invalid_params}), 400
+    if sort:
+        # sort by given field; reverse=True only if direction is explicit "desc"
+        reverse = direction == "desc"
+        sorted_posts = sorted(POSTS, key=lambda x: x[sort], reverse=reverse)
+    elif direction == "desc":
+        # no sort field given, but direction is "desc" -> sort by ID descending
+        sorted_posts = sorted(POSTS, key=lambda x: x["id"], reverse=True)
+    else:
+        # no sort field given, but direction is "asc" -> original order is already ascending
+        return jsonify(POSTS)
+    return jsonify(sorted_posts)
 
 
 @app.route('/api/posts/<int:post_id>', methods=['DELETE', 'PATCH'])
