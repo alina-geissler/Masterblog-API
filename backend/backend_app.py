@@ -33,5 +33,18 @@ def validate_post(blog_post):
     return missing_fields
 
 
+def find_post_by_id(post_id):
+    return next((post for post in POSTS if post.get("id") == post_id), None)
+
+
+@app.route('/api/posts/<int:post_id>', methods=['DELETE'])
+def delete_post(post_id):
+    post = find_post_by_id(post_id)
+    if post is None:
+        return jsonify({"error": f"No post with ID {post_id} found."}), 404
+    POSTS.remove(post)
+    return jsonify({f"message": f"Post with ID {post_id} has been deleted successfully."})
+
+
 if __name__ == '__main__':
     app.run(host="0.0.0.0", port=5002, debug=True)
