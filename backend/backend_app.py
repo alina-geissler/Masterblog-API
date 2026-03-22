@@ -10,6 +10,19 @@ POSTS = [
 ]
 
 
+def validate_post(blog_post):
+    missing_fields = []
+    if "title" not in blog_post:
+        missing_fields.append("title")
+    if "content" not in blog_post:
+        missing_fields.append("content")
+    return missing_fields
+
+
+def find_post_by_id(post_id):
+    return next((post for post in POSTS if post.get("id") == post_id), None)
+
+
 @app.route('/api/posts', methods=['GET', 'POST'])
 def handle_posts():
     if request.method == 'POST':
@@ -22,19 +35,6 @@ def handle_posts():
         POSTS.append(new_post)
         return jsonify(new_post), 201
     return jsonify(POSTS)
-
-
-def validate_post(blog_post):
-    missing_fields = []
-    if "title" not in blog_post:
-        missing_fields.append("title")
-    if "content" not in blog_post:
-        missing_fields.append("content")
-    return missing_fields
-
-
-def find_post_by_id(post_id):
-    return next((post for post in POSTS if post.get("id") == post_id), None)
 
 
 @app.route('/api/posts/<int:post_id>', methods=['DELETE', 'PATCH'])
@@ -54,6 +54,20 @@ def edit_post(post_id):
         if "content" in updated_post:
             post["content"] = updated_post["content"]
         return jsonify(post)
+
+
+@app.route('/api/posts/search', methods=['GET'])
+def search_for_posts():
+    title = request.args.get("title")
+    content = request.args.get("content")
+    matching_posts = []
+    for post in POSTS:
+        if title and title not in post.get("title", ""):
+            continue
+        if content and content not in post.get("content", ""):
+            continue
+        matching_posts.append(post)
+    return jsonify(matching_posts)
 
 
 if __name__ == '__main__':
