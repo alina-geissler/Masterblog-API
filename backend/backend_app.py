@@ -37,13 +37,23 @@ def find_post_by_id(post_id):
     return next((post for post in POSTS if post.get("id") == post_id), None)
 
 
-@app.route('/api/posts/<int:post_id>', methods=['DELETE'])
-def delete_post(post_id):
+@app.route('/api/posts/<int:post_id>', methods=['DELETE', 'PATCH'])
+def edit_post(post_id):
     post = find_post_by_id(post_id)
     if post is None:
         return jsonify({"error": f"No post with ID {post_id} found."}), 404
-    POSTS.remove(post)
-    return jsonify({f"message": f"Post with ID {post_id} has been deleted successfully."})
+    if request.method == 'DELETE':
+        POSTS.remove(post)
+        return jsonify({f"message": f"Post with ID {post_id} has been deleted successfully."})
+    else:
+        updated_post = request.get_json()
+        if not updated_post:
+            return jsonify({"error": "No data provided."}), 400
+        if "title" in updated_post:
+            post["title"] = updated_post["title"]
+        if "content" in updated_post:
+            post["content"] = updated_post["content"]
+        return jsonify(post)
 
 
 if __name__ == '__main__':
