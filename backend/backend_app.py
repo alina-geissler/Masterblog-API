@@ -11,6 +11,12 @@ POSTS = [
 
 
 def validate_post(blog_post):
+    """
+    Check that a blog post contains all required fields.
+
+    :param blog_post: dict – the post data to validate
+    :return: list of missing field names, empty if valid
+    """
     missing_fields = []
     if "title" not in blog_post:
         missing_fields.append("title")
@@ -20,6 +26,13 @@ def validate_post(blog_post):
 
 
 def validate_sorting_params(sort_by, sorting_direction):
+    """
+    Check that sorting parameters contain only accepted values.
+
+    :param sort_by: str or None – field to sort by ('title', 'content')
+    :param sorting_direction: str or None – sort order ('asc', 'desc')
+    :return: list of invalid parameter values, empty if valid
+    """
     invalid_params = []
     if sort_by not in ("title", "content", None):
         invalid_params.append(sort_by)
@@ -29,11 +42,31 @@ def validate_sorting_params(sort_by, sorting_direction):
 
 
 def find_post_by_id(post_id):
+    """
+    Find a post in POSTS by its ID.
+
+    :param post_id: int – the ID to search for
+    :return: post dict if found, None otherwise
+    """
     return next((post for post in POSTS if post.get("id") == post_id), None)
 
 
 @app.route('/api/posts', methods=['GET', 'POST'])
 def handle_posts():
+    """
+    Handle GET and POST requests for /api/posts.
+
+    POST: Create a new post. Requires 'title' and 'content' in request body.
+          Returns created post with status 201 on success.
+          Returns 400 if fields are missing.
+
+    GET:  Return all posts as JSON. Supports optional query parameters:
+          - sort: 'title' or 'content'
+          - direction: 'asc' (default) or 'desc'
+          Returns unsorted posts if no parameters are provided.
+          Returns sorted posts if valid parameters are provided.
+          Returns 400 if parameters are invalid.
+    """
     if request.method == 'POST':
         new_post = request.get_json()
         # validate that required fields are present
@@ -69,6 +102,17 @@ def handle_posts():
 
 @app.route('/api/posts/<int:post_id>', methods=['DELETE', 'PATCH'])
 def edit_post(post_id):
+    """
+    Handle PATCH and DELETE requests for /api/posts/<post_id>.
+
+    DELETE: Remove the post with the given ID.
+            Returns confirmation message on success.
+    PATCH:  Update 'title' and/or 'content' of the post with the given ID.
+            Returns updated post on success.
+            Returns 400 if no data is provided.
+
+    :param post_id: int – ID of the post to edit or delete
+    """
     post = find_post_by_id(post_id)
     if post is None:
         return jsonify({"error": f"No post with ID {post_id} found."}), 404
@@ -88,13 +132,22 @@ def edit_post(post_id):
 
 @app.route('/api/posts/search', methods=['GET'])
 def search_for_posts():
+    """
+    Search posts by title and/or content (case-insensitive substring match).
+
+    Query parameters (both optional):
+    - title: filter posts containing this string in the title
+    - content: filter posts containing this string in the content
+
+    :return: list of matching posts as JSON, empty if no match found
+    """
     title = request.args.get("title")
     content = request.args.get("content")
     matching_posts = []
     for post in POSTS:
-        if title and title not in post.get("title", ""):
+        if title and title.lower() not in post.get("title", "").lower():
             continue
-        if content and content not in post.get("content", ""):
+        if content and content.lower() not in post.get("content", "").lower():
             continue
         matching_posts.append(post)
     return jsonify(matching_posts)
