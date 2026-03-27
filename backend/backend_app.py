@@ -90,10 +90,10 @@ def handle_posts():
     if sort:
         # sort by given field; reverse=True only if direction is explicit "desc"
         reverse = direction == "desc"
-        sorted_posts = sorted(POSTS, key=lambda x: x[sort], reverse=reverse)
+        sorted_posts = sorted(POSTS, key=lambda x: x.get(sort, ""), reverse=reverse)
     elif direction == "desc":
         # no sort field given, but direction is "desc" -> sort by ID descending
-        sorted_posts = sorted(POSTS, key=lambda x: x["id"], reverse=True)
+        sorted_posts = sorted(POSTS, key=lambda x: x.get("id", ""), reverse=True)
     else:
         # no sort field given, but direction is "asc" -> original order is already ascending
         return jsonify(POSTS)
@@ -123,6 +123,8 @@ def edit_post(post_id):
         updated_post = request.get_json()
         if not updated_post:
             return jsonify({"error": "No data provided."}), 400
+        if "title" not in updated_post and "content" not in updated_post:
+            return jsonify({"error": "No valid fields provided."}), 400
         if "title" in updated_post:
             post["title"] = updated_post["title"]
         if "content" in updated_post:
